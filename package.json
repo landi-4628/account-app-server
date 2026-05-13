@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "start": "nodemon ./bin/www",
-    "format": "prettier --write \"**/*.{js,json,md}\""
+    "format": "prettier --write \"**/*.{js,json,md}\"",
+    "test": "node --test \"tests/*.test.js\"",
+    "db:init": "node ./scripts/database-cli.js init",
+    "db:init:dry-run": "node ./scripts/database-cli.js init --dry-run",
+    "db:migrate": "node ./scripts/database-cli.js migrate",
+    "db:seed": "node ./scripts/database-cli.js seed"
   },
   "dependencies": {
     "cookie-parser": "~1.4.7",

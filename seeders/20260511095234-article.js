@@ -1,23 +1,12 @@
+import { buildArticleSeedData } from './article-data.js'
+
 export default {
-  async up(queryInterface, Sequelize) {
-    const articles = []
-    const counts = 100
-
-    for (let i = 1; i <= counts; i++) {
-      const article = {
-        title: `文章的标题 ${i}`,
-        content: `文章的内容 ${i}`,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-
-      articles.push(article)
-    }
-
+  async up(queryInterface) {
+    const articles = buildArticleSeedData()
     await queryInterface.bulkInsert('Articles', articles, {})
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface) {
     await queryInterface.bulkDelete('Articles', null, {})
   },
 }

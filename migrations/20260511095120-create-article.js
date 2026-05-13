@@ -1,5 +1,6 @@
 export default {
   async up(queryInterface, Sequelize) {
+    // 文章表示例，保持与 database.md 约定的字段结构一致。
     await queryInterface.createTable('Articles', {
       id: {
         allowNull: false,
