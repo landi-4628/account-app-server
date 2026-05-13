@@ -11,14 +11,14 @@ export default async function requireAuth(req, res, next) {
     const [scheme, token] = header.split(' ')
 
     if (!scheme || scheme.toLowerCase() !== 'bearer' || !token) {
-      throw new Unauthorized('Authentication required')
+      throw new Unauthorized('请先登录（需要提供 Bearer 访问令牌）')
     }
 
     const payload = verifyAccessToken(token)
     const user = await db.User.findByPk(payload.sub)
 
     if (!user) {
-      throw new Unauthorized('Authenticated user not found')
+      throw new Unauthorized('登录已失效，请重新登录')
     }
 
     req.auth = payload

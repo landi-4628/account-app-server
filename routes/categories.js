@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
     order: [['id', 'ASC']],
   })
 
-  success(res, 'Categories fetched.', { categories })
+  success(res, '已获取分类列表', { categories })
 })
 
 router.post('/', async (req, res) => {
@@ -26,20 +26,20 @@ router.post('/', async (req, res) => {
       ledgerId: resolveLedgerId(req, { from: 'body' }),
     }),
   )
-  success(res, 'Category created.', { category }, 201)
+  success(res, '分类已创建', { category }, 201)
 })
 
 router.patch('/:id', async (req, res) => {
   const category = await getCategory(req.params.id, resolveLedgerId(req, { from: 'query' }))
 
   await category.update(filterCategoryBody(req.body, { partial: true }))
-  success(res, 'Category updated.', { category })
+  success(res, '分类已更新', { category })
 })
 
 async function getCategory(id, ledgerId) {
   const normalizedId = normalizeEntityId(id)
   if (!normalizedId) {
-    throw new NotFound(`Category ${id} not found.`)
+    throw new BadRequest('无效的分类 id')
   }
 
   const category = await Category.findOne({
@@ -50,7 +50,7 @@ async function getCategory(id, ledgerId) {
   })
 
   if (!category) {
-    throw new NotFound(`Category ${id} not found.`)
+    throw new NotFound(`未找到分类（id: ${id}）`)
   }
 
   return category
@@ -68,7 +68,7 @@ function resolveLedgerId(req, options = {}) {
     return fromRequest
   }
 
-  throw new BadRequest('A current ledger is required for category operations.')
+  throw new BadRequest('分类操作需要指定当前账本（currentLedgerId 或 ledger_id）。')
 }
 
 function buildLedgerWhere(ledgerId) {

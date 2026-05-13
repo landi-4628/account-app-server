@@ -12,7 +12,7 @@ const { BadRequest, Conflict, Unauthorized } = createError
 router.use(requireAuth)
 
 router.get('/', async (req, res) => {
-  success(res, 'Current user loaded successfully', {
+  success(res, '已获取当前用户信息', {
     user: db.User.sanitize(req.user),
   })
 })
@@ -23,7 +23,7 @@ router.patch('/', async (req, res) => {
   if (typeof req.body.name === 'string') {
     const name = req.body.name.trim()
     if (!name) {
-      throw new BadRequest('Name cannot be empty')
+      throw new BadRequest('姓名不能为空')
     }
 
     updates.name = name
@@ -32,12 +32,12 @@ router.patch('/', async (req, res) => {
   if (typeof req.body.email === 'string') {
     const email = req.body.email.trim().toLowerCase()
     if (!email) {
-      throw new BadRequest('Email cannot be empty')
+      throw new BadRequest('邮箱不能为空')
     }
 
     const existingUser = await db.User.findOne({ where: { email } })
     if (existingUser && existingUser.id !== req.user.id) {
-      throw new Conflict('Email is already registered')
+      throw new Conflict('该邮箱已被其他账号使用')
     }
 
     updates.email = email
@@ -45,7 +45,7 @@ router.patch('/', async (req, res) => {
 
   const user = await db.User.updateProfile(req.user.id, updates)
 
-  success(res, 'Profile updated successfully', {
+  success(res, '资料已更新', {
     user: db.User.sanitize(user),
   })
 })
@@ -55,14 +55,14 @@ router.post('/change-password', async (req, res) => {
   const newPassword = String(req.body.newPassword || '')
 
   if (!verifyPassword(currentPassword, req.user.passwordHash)) {
-    throw new Unauthorized('Current password is incorrect')
+    throw new Unauthorized('当前密码不正确')
   }
 
   const passwordHash = hashPassword(newPassword)
   await db.User.updatePassword(req.user.id, passwordHash)
   await db.RefreshToken.revokeAllForUser(req.user.id)
 
-  success(res, 'Password changed successfully')
+  success(res, '密码已修改')
 })
 
 export default router

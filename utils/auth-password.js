@@ -1,10 +1,12 @@
 import crypto from 'node:crypto'
+import createError from 'http-errors'
 
+const { BadRequest } = createError
 const KEY_LENGTH = 64
 
 function assertPasswordShape(password) {
   if (typeof password !== 'string' || password.length < 8) {
-    throw new Error('Password must be at least 8 characters long')
+    throw new BadRequest('密码长度至少为 8 个字符')
   }
 }
 

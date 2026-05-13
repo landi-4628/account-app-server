@@ -92,7 +92,7 @@ async function getArticle(req) {
 
   const article = await Article.findByPk(id)
   if (!article) {
-    throw new NotFound(`ID: ${id}的文章未找到。`)
+    throw new NotFound(`未找到指定文章（id: ${id}）`)
   }
 
   return article

@@ -28,7 +28,7 @@ router.post('/push', async (req, res) => {
     ledgerId,
   )
 
-  success(res, 'Sync push completed.', {
+  success(res, '同步推送已完成', {
     accounts,
     categories,
     transactions,
@@ -45,7 +45,7 @@ router.get('/pull', async (req, res) => {
     Transaction.findAll({ where, order: [['updatedAt', 'ASC'], ['id', 'ASC']] }),
   ])
 
-  success(res, 'Sync pull completed.', {
+  success(res, '同步拉取已完成', {
     accounts,
     categories,
     transactions,
@@ -125,7 +125,7 @@ function resolveLedgerId(req, options = {}) {
     return fromRequest
   }
 
-  throw new BadRequest('A current ledger is required for sync operations.')
+  throw new BadRequest('同步操作需要指定当前账本（currentLedgerId 或 ledger_id）。')
 }
 
 function filterAccountBody(body, ledgerId) {

@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
     order: [['id', 'ASC']],
   })
 
-  success(res, 'Accounts fetched.', { accounts })
+  success(res, '已获取账户列表', { accounts })
 })
 
 router.post('/', async (req, res) => {
@@ -26,20 +26,20 @@ router.post('/', async (req, res) => {
       ledgerId: resolveLedgerId(req, { from: 'body' }),
     }),
   )
-  success(res, 'Account created.', { account }, 201)
+  success(res, '账户已创建', { account }, 201)
 })
 
 router.patch('/:id', async (req, res) => {
   const account = await getAccount(req.params.id, resolveLedgerId(req, { from: 'query' }))
 
   await account.update(filterAccountBody(req.body, { partial: true }))
-  success(res, 'Account updated.', { account })
+  success(res, '账户已更新', { account })
 })
 
 async function getAccount(id, ledgerId) {
   const normalizedId = normalizeEntityId(id)
   if (!normalizedId) {
-    throw new NotFound(`Account ${id} not found.`)
+    throw new BadRequest('无效的账户 id')
   }
 
   const account = await Account.findOne({
@@ -50,7 +50,7 @@ async function getAccount(id, ledgerId) {
   })
 
   if (!account) {
-    throw new NotFound(`Account ${id} not found.`)
+    throw new NotFound(`未找到账户（id: ${id}）`)
   }
 
   return account
@@ -68,7 +68,7 @@ function resolveLedgerId(req, options = {}) {
     return fromRequest
   }
 
-  throw new BadRequest('A current ledger is required for account operations.')
+  throw new BadRequest('账户操作需要指定当前账本（currentLedgerId 或 ledger_id）。')
 }
 
 function buildLedgerWhere(ledgerId) {

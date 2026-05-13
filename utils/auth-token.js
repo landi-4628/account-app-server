@@ -17,7 +17,7 @@ function getAccessTokenSecret() {
   }
 
   if ((process.env.NODE_ENV || 'development') === 'production') {
-    throw new Error('AUTH_ACCESS_TOKEN_SECRET must be configured in production')
+    throw new Error('生产环境必须在环境变量中配置 AUTH_ACCESS_TOKEN_SECRET')
   }
 
   return 'dev-access-secret'
@@ -40,12 +40,12 @@ function signAccessToken(payload) {
 
 function verifyAccessToken(token) {
   if (typeof token !== 'string') {
-    throw new Error('Missing access token')
+    throw new Error('缺少访问令牌')
   }
 
   const [encodedPayload, signature] = token.split('.')
   if (!encodedPayload || !signature) {
-    throw new Error('Malformed access token')
+    throw new Error('访问令牌格式不正确')
   }
 
   const expected = crypto
@@ -54,12 +54,12 @@ function verifyAccessToken(token) {
     .digest('base64url')
 
   if (expected !== signature) {
-    throw new Error('Invalid access token signature')
+    throw new Error('访问令牌签名校验失败')
   }
 
   const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'))
   if (payload.exp <= Math.floor(Date.now() / 1000)) {
-    throw new Error('Access token expired')
+    throw new Error('访问令牌已过期')
   }
 
   return payload

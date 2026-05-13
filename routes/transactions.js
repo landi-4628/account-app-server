@@ -20,12 +20,12 @@ router.get('/', async (req, res) => {
     ],
   })
 
-  success(res, 'Transactions fetched.', { transactions })
+  success(res, '已获取流水列表', { transactions })
 })
 
 router.get('/:id', async (req, res) => {
   const transaction = await getTransaction(req.params.id, resolveLedgerId(req, { from: 'query' }))
-  success(res, 'Transaction fetched.', { transaction })
+  success(res, '已获取流水详情', { transaction })
 })
 
 router.post('/', async (req, res) => {
@@ -34,14 +34,14 @@ router.post('/', async (req, res) => {
       ledgerId: resolveLedgerId(req, { from: 'body' }),
     }),
   )
-  success(res, 'Transaction created.', { transaction }, 201)
+  success(res, '流水已创建', { transaction }, 201)
 })
 
 router.patch('/:id', async (req, res) => {
   const transaction = await getTransaction(req.params.id, resolveLedgerId(req, { from: 'query' }))
 
   await transaction.update(filterTransactionBody(req.body, { partial: true }))
-  success(res, 'Transaction updated.', { transaction })
+  success(res, '流水已更新', { transaction })
 })
 
 router.delete('/:id', async (req, res) => {
@@ -52,13 +52,13 @@ router.delete('/:id', async (req, res) => {
     deleted_at: new Date(),
   })
 
-  success(res, 'Transaction deleted.', { transaction })
+  success(res, '流水已删除', { transaction })
 })
 
 async function getTransaction(id, ledgerId) {
   const normalizedId = normalizeEntityId(id)
   if (!normalizedId) {
-    throw new NotFound(`Transaction ${id} not found.`)
+    throw new BadRequest('无效的流水 id')
   }
 
   const transaction = await Transaction.findOne({
@@ -69,7 +69,7 @@ async function getTransaction(id, ledgerId) {
   })
 
   if (!transaction) {
-    throw new NotFound(`Transaction ${id} not found.`)
+    throw new NotFound(`未找到流水（id: ${id}）`)
   }
 
   return transaction
@@ -87,7 +87,7 @@ function resolveLedgerId(req, options = {}) {
     return fromRequest
   }
 
-  throw new BadRequest('A current ledger is required for transaction operations.')
+  throw new BadRequest('流水操作需要指定当前账本（currentLedgerId 或 ledger_id）。')
 }
 
 function buildLedgerWhere(ledgerId) {

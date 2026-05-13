@@ -17,7 +17,7 @@ const { BadRequest, Conflict, Unauthorized } = createError
 function ensureEmail(email) {
   const normalized = String(email || '').trim().toLowerCase()
   if (!normalized) {
-    throw new BadRequest('Email is required')
+    throw new BadRequest('请填写邮箱')
   }
 
   return normalized
@@ -26,7 +26,7 @@ function ensureEmail(email) {
 function ensureName(name) {
   const normalized = String(name || '').trim()
   if (!normalized) {
-    throw new BadRequest('Name is required')
+    throw new BadRequest('请填写姓名')
   }
 
   return normalized
@@ -82,7 +82,7 @@ router.post('/register', async (req, res) => {
   const existingUser = await db.User.findOne({ where: { email } })
 
   if (existingUser) {
-    throw new Conflict('Email is already registered')
+    throw new Conflict('该邮箱已被注册')
   }
 
   let user
@@ -94,7 +94,7 @@ router.post('/register', async (req, res) => {
     })
   } catch (error) {
     if (error instanceof UniqueConstraintError) {
-      throw new Conflict('Email is already registered')
+      throw new Conflict('该邮箱已被注册')
     }
 
     throw error
@@ -103,7 +103,7 @@ router.post('/register', async (req, res) => {
   const refreshToken = await persistRefreshToken(user.id)
   setRefreshTokenCookie(res, refreshToken)
 
-  success(res, 'Registered successfully', issueAuthPayload(user), 201)
+  success(res, '注册成功', issueAuthPayload(user), 201)
 })
 
 router.post('/login', async (req, res) => {
@@ -112,37 +112,37 @@ router.post('/login', async (req, res) => {
   const user = await db.User.findOne({ where: { email } })
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
-    throw new Unauthorized('Invalid email or password')
+    throw new Unauthorized('邮箱或密码不正确')
   }
 
   const refreshToken = await persistRefreshToken(user.id)
   setRefreshTokenCookie(res, refreshToken)
 
-  success(res, 'Logged in successfully', issueAuthPayload(user))
+  success(res, '登录成功', issueAuthPayload(user))
 })
 
 router.post('/refresh', async (req, res) => {
   const token = req.cookies.refreshToken
   if (!token) {
-    throw new Unauthorized('Refresh token is required')
+    throw new Unauthorized('缺少刷新令牌，请重新登录')
   }
 
   const record = await db.RefreshToken.findActiveByTokenHash(hashRefreshToken(token))
   if (!record) {
-    throw new Unauthorized('Refresh token is invalid')
+    throw new Unauthorized('刷新令牌无效或已失效，请重新登录')
   }
 
   await db.RefreshToken.revokeByTokenHash(record.tokenHash)
 
   const user = await db.User.findByPk(record.userId)
   if (!user) {
-    throw new Unauthorized('Refresh token user not found')
+    throw new Unauthorized('刷新令牌对应的用户不存在')
   }
 
   const nextRefreshToken = await persistRefreshToken(user.id)
   setRefreshTokenCookie(res, nextRefreshToken)
 
-  success(res, 'Token refreshed successfully', issueAuthPayload(user))
+  success(res, '令牌刷新成功', issueAuthPayload(user))
 })
 
 router.post('/logout', async (req, res) => {
@@ -152,7 +152,7 @@ router.post('/logout', async (req, res) => {
   }
 
   clearRefreshTokenCookie(res)
-  success(res, 'Logged out successfully')
+  success(res, '已退出登录')
 })
 
 export default router
