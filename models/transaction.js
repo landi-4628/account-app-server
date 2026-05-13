@@ -4,7 +4,6 @@ export default (sequelize, DataTypes) => {
   class Transaction extends Model {
     static associate(models) {
       Transaction.belongsTo(models.Ledger, { foreignKey: 'ledger_id', as: 'ledger' })
-      Transaction.belongsTo(models.Account, { foreignKey: 'account_id', as: 'account' })
       Transaction.belongsTo(models.Category, { foreignKey: 'category_id', as: 'category' })
     }
   }
@@ -21,7 +20,7 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
       },
       account_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING(64),
         allowNull: false,
       },
       category_id: {

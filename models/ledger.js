@@ -3,7 +3,6 @@ import { Model } from 'sequelize'
 export default (sequelize, DataTypes) => {
   class Ledger extends Model {
     static associate(models) {
-      Ledger.hasMany(models.Account, { foreignKey: 'ledger_id', as: 'accounts' })
       Ledger.hasMany(models.Category, { foreignKey: 'ledger_id', as: 'categories' })
       Ledger.hasMany(models.Transaction, { foreignKey: 'ledger_id', as: 'transactions' })
     }

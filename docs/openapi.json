@@ -14,7 +14,6 @@
   "tags": [
     { "name": "Auth" },
     { "name": "Profile" },
-    { "name": "Accounts" },
     { "name": "Categories" },
     { "name": "Transactions" },
     { "name": "Sync" },
@@ -113,33 +112,6 @@
           "email": { "type": "string", "format": "email" }
         }
       },
-      "Account": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer", "example": 1 },
-          "ledger_id": { "type": "integer", "example": 12 },
-          "client_id": { "type": "string", "example": "acc-cash" },
-          "name": { "type": "string", "example": "Cash" },
-          "type": { "type": "string", "example": "asset" },
-          "currency": { "type": "string", "example": "CNY" },
-          "opening_balance": { "type": "string", "example": "88.30" },
-          "is_deleted": { "type": "boolean", "example": false },
-          "deleted_at": { "type": ["string", "null"], "format": "date-time" }
-        }
-      },
-      "AccountWriteRequest": {
-        "type": "object",
-        "properties": {
-          "ledger_id": { "type": "integer" },
-          "client_id": { "type": "string" },
-          "name": { "type": "string" },
-          "type": { "type": "string" },
-          "currency": { "type": "string" },
-          "opening_balance": { "type": "string" },
-          "is_deleted": { "type": "boolean" },
-          "deleted_at": { "type": "string", "format": "date-time" }
-        }
-      },
       "Category": {
         "type": "object",
         "properties": {
@@ -170,7 +142,7 @@
         "properties": {
           "id": { "type": "integer", "example": 22 },
           "ledger_id": { "type": "integer", "example": 8 },
-          "account_id": { "type": "integer", "example": 1 },
+          "account_id": { "type": "string", "description": "客户端账户标识（如 acc-cash），无服务端账户表", "example": "acc-cash" },
           "category_id": { "type": ["integer", "null"], "example": 2 },
           "client_id": { "type": "string", "example": "txn-1" },
           "kind": { "type": "string", "example": "expense" },
@@ -185,7 +157,7 @@
         "type": "object",
         "properties": {
           "ledger_id": { "type": "integer" },
-          "account_id": { "type": "integer" },
+          "account_id": { "type": "string", "description": "客户端账户标识" },
           "category_id": { "type": "integer" },
           "client_id": { "type": "string" },
           "kind": { "type": "string" },
@@ -200,10 +172,6 @@
         "type": "object",
         "properties": {
           "ledger_id": { "type": "integer" },
-          "accounts": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/AccountWriteRequest" }
-          },
           "categories": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/CategoryWriteRequest" }
@@ -347,123 +315,6 @@
         "responses": {
           "200": { "description": "修改成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
           "401": { "description": "未认证或旧密码错误", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      }
-    },
-    "/api/accounts": {
-      "get": {
-        "tags": ["Accounts"],
-        "summary": "获取账户列表",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "name": "ledger_id",
-            "in": "query",
-            "schema": { "type": "integer" },
-            "required": false,
-            "description": "当用户没有 currentLedgerId 时的兜底账本 ID"
-          }
-        ],
-        "responses": {
-          "200": { "description": "获取成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
-          "400": { "description": "缺少账本", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
-          "401": { "description": "未认证", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      },
-      "post": {
-        "tags": ["Accounts"],
-        "summary": "创建账户",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/AccountWriteRequest" }
-            }
-          }
-        },
-        "responses": {
-          "201": { "description": "创建成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
-          "400": { "description": "缺少账本", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      }
-    },
-    "/api/accounts/{id}": {
-      "get": {
-        "tags": ["Accounts"],
-        "summary": "获取单个账户",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "ledger_id",
-            "in": "query",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": { "description": "获取成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
-          "404": { "description": "账户不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      },
-      "patch": {
-        "tags": ["Accounts"],
-        "summary": "更新账户",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "ledger_id",
-            "in": "query",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/AccountWriteRequest" }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "更新成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
-          "404": { "description": "账户不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
-        }
-      },
-      "delete": {
-        "tags": ["Accounts"],
-        "summary": "删除账户（软删除）",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "ledger_id",
-            "in": "query",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": { "description": "删除成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
-          "404": { "description": "账户不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },

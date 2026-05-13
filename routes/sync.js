@@ -7,14 +7,13 @@ import { normalizeEntityId } from '../utils/entity-id.js'
 import { success } from '../utils/responses.js'
 
 const router = express.Router()
-const { Account, Category, Transaction } = db
+const { Category, Transaction } = db
 const { BadRequest } = createError
 
 router.use(requireAuth)
 
 router.post('/push', async (req, res) => {
   const ledgerId = resolveLedgerId(req, { from: 'body' })
-  const accounts = await syncCollection(Account, req.body.accounts || [], filterAccountBody, ledgerId)
   const categories = await syncCollection(
     Category,
     req.body.categories || [],
@@ -29,7 +28,6 @@ router.post('/push', async (req, res) => {
   )
 
   success(res, '同步推送已完成', {
-    accounts,
     categories,
     transactions,
     server_time: new Date().toISOString(),
@@ -39,14 +37,12 @@ router.post('/push', async (req, res) => {
 router.get('/pull', async (req, res) => {
   const where = buildPullWhere(req, { from: 'query' })
 
-  const [accounts, categories, transactions] = await Promise.all([
-    Account.findAll({ where, order: [['updatedAt', 'ASC'], ['id', 'ASC']] }),
+  const [categories, transactions] = await Promise.all([
     Category.findAll({ where, order: [['updatedAt', 'ASC'], ['id', 'ASC']] }),
     Transaction.findAll({ where, order: [['updatedAt', 'ASC'], ['id', 'ASC']] }),
   ])
 
   success(res, '同步拉取已完成', {
-    accounts,
     categories,
     transactions,
     server_time: new Date().toISOString(),
@@ -128,20 +124,6 @@ function resolveLedgerId(req, options = {}) {
   throw new BadRequest('同步操作需要指定当前账本（currentLedgerId 或 ledger_id）。')
 }
 
-function filterAccountBody(body, ledgerId) {
-  return removeUndefined({
-    id: body.id,
-    ledger_id: ledgerId,
-    client_id: body.client_id,
-    name: body.name,
-    type: body.type,
-    currency: body.currency,
-    opening_balance: body.opening_balance,
-    is_deleted: body.is_deleted,
-    deleted_at: body.deleted_at,
-  })
-}
-
 function filterCategoryBody(body, ledgerId) {
   return removeUndefined({
     id: body.id,
@@ -159,7 +141,7 @@ function filterTransactionBody(body, ledgerId) {
   return removeUndefined({
     id: body.id,
     ledger_id: ledgerId,
-    account_id: body.account_id,
+    account_id: body.account_id != null ? String(body.account_id) : undefined,
     category_id: body.category_id,
     client_id: body.client_id,
     kind: body.kind,
