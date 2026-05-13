@@ -97,6 +97,91 @@ test('POST /api/categories creates a category in the current ledger', async (t) 
   assert.equal(body.data.category.client_id, 'cat-rent')
 })
 
+test('GET /api/categories/:id returns a single active category', async (t) => {
+  const originalFindOne = Category?.findOne
+  const originalUserFindByPk = db.User.findByPk
+
+  Category.findOne = async ({ where }) => {
+    assert.deepEqual(where, {
+      id: CATEGORY_7,
+      ledger_id: LEDGER_5,
+      is_deleted: false,
+    })
+
+    return {
+      id: CATEGORY_7,
+      ledger_id: LEDGER_5,
+      client_id: 'cat-food',
+      name: 'Food',
+      kind: 'expense',
+    }
+  }
+  db.User.findByPk = async () => ({ id: USER_51, email: 'category@example.com', currentLedgerId: LEDGER_5 })
+
+  t.after(() => {
+    Category.findOne = originalFindOne
+    db.User.findByPk = originalUserFindByPk
+  })
+
+  const server = http.createServer(app)
+  await new Promise((resolve) => server.listen(0, resolve))
+  t.after(() => server.close())
+
+  const { port } = server.address()
+  const response = await fetch(`http://127.0.0.1:${port}/api/categories/${CATEGORY_7}`, {
+    headers: authHeader,
+  })
+
+  assert.equal(response.status, 200)
+  const body = await response.json()
+  assert.equal(body.data.category.name, 'Food')
+})
+
+test('DELETE /api/categories/:id soft-deletes a category', async (t) => {
+  const originalFindOne = Category?.findOne
+  const originalUserFindByPk = db.User.findByPk
+
+  const record = {
+    id: CATEGORY_3,
+    ledger_id: LEDGER_5,
+    is_deleted: false,
+    async update(payload) {
+      Object.assign(this, payload)
+      return this
+    },
+  }
+
+  Category.findOne = async ({ where }) => {
+    assert.deepEqual(where, {
+      id: CATEGORY_3,
+      ledger_id: LEDGER_5,
+      is_deleted: false,
+    })
+
+    return record
+  }
+  db.User.findByPk = async () => ({ id: USER_51, email: 'category@example.com', currentLedgerId: LEDGER_5 })
+
+  t.after(() => {
+    Category.findOne = originalFindOne
+    db.User.findByPk = originalUserFindByPk
+  })
+
+  const server = http.createServer(app)
+  await new Promise((resolve) => server.listen(0, resolve))
+  t.after(() => server.close())
+
+  const { port } = server.address()
+  const response = await fetch(`http://127.0.0.1:${port}/api/categories/${CATEGORY_3}`, {
+    method: 'DELETE',
+    headers: authHeader,
+  })
+
+  assert.equal(response.status, 200)
+  const body = await response.json()
+  assert.equal(body.data.category.is_deleted, true)
+})
+
 test('PATCH /api/categories/:id updates a category', async (t) => {
   const originalFindOne = Category?.findOne
   const originalUserFindByPk = db.User.findByPk

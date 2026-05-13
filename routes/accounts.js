@@ -20,6 +20,13 @@ router.get('/', async (req, res) => {
   success(res, '已获取账户列表', { accounts })
 })
 
+router.get('/:id', async (req, res) => {
+  const account = await findAccount(req.params.id, resolveLedgerId(req, { from: 'query' }), {
+    activeOnly: true,
+  })
+  success(res, '已获取账户', { account })
+})
+
 router.post('/', async (req, res) => {
   const account = await Account.create(
     filterAccountBody(req.body, {
@@ -30,23 +37,48 @@ router.post('/', async (req, res) => {
 })
 
 router.patch('/:id', async (req, res) => {
-  const account = await getAccount(req.params.id, resolveLedgerId(req, { from: 'query' }))
+  const account = await findAccount(req.params.id, resolveLedgerId(req, { from: 'query' }), {
+    activeOnly: false,
+  })
 
   await account.update(filterAccountBody(req.body, { partial: true }))
   success(res, '账户已更新', { account })
 })
 
-async function getAccount(id, ledgerId) {
+router.delete('/:id', async (req, res) => {
+  const account = await findAccount(req.params.id, resolveLedgerId(req, { from: 'query' }), {
+    activeOnly: true,
+  })
+
+  await account.update({
+    is_deleted: true,
+    deleted_at: new Date(),
+  })
+  success(res, '账户已删除', { account })
+})
+
+/**
+ * @param {string} id
+ * @param {string} ledgerId
+ * @param {{ activeOnly?: boolean }} [options]
+ */
+async function findAccount(id, ledgerId, options = {}) {
   const normalizedId = normalizeEntityId(id)
   if (!normalizedId) {
     throw new BadRequest('无效的账户 id')
   }
 
+  const where = {
+    id: normalizedId,
+    ledger_id: ledgerId,
+  }
+
+  if (options.activeOnly) {
+    Object.assign(where, { is_deleted: false })
+  }
+
   const account = await Account.findOne({
-    where: {
-      id: normalizedId,
-      ledger_id: ledgerId,
-    },
+    where,
   })
 
   if (!account) {

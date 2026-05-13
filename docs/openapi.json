@@ -389,6 +389,29 @@
       }
     },
     "/api/accounts/{id}": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "获取单个账户",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "ledger_id",
+            "in": "query",
+            "schema": { "type": "string", "format": "uuid" },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": { "description": "获取成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
+          "404": { "description": "账户不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
       "patch": {
         "tags": ["Accounts"],
         "summary": "更新账户",
@@ -398,12 +421,12 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": { "type": "string", "format": "uuid" }
           },
           {
             "name": "ledger_id",
             "in": "query",
-            "schema": { "type": "integer" },
+            "schema": { "type": "string", "format": "uuid" },
             "required": false
           }
         ],
@@ -417,6 +440,29 @@
         },
         "responses": {
           "200": { "description": "更新成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
+          "404": { "description": "账户不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Accounts"],
+        "summary": "删除账户（软删除）",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "ledger_id",
+            "in": "query",
+            "schema": { "type": "string", "format": "uuid" },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": { "description": "删除成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
           "404": { "description": "账户不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
@@ -457,6 +503,29 @@
       }
     },
     "/api/categories/{id}": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "获取单个分类",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "ledger_id",
+            "in": "query",
+            "schema": { "type": "string", "format": "uuid" },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": { "description": "获取成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
+          "404": { "description": "分类不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
       "patch": {
         "tags": ["Categories"],
         "summary": "更新分类",
@@ -466,12 +535,12 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": { "type": "string", "format": "uuid" }
           },
           {
             "name": "ledger_id",
             "in": "query",
-            "schema": { "type": "integer" },
+            "schema": { "type": "string", "format": "uuid" },
             "required": false
           }
         ],
@@ -485,6 +554,29 @@
         },
         "responses": {
           "200": { "description": "更新成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
+          "404": { "description": "分类不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Categories"],
+        "summary": "删除分类（软删除）",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "ledger_id",
+            "in": "query",
+            "schema": { "type": "string", "format": "uuid" },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": { "description": "删除成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessResponse" } } } },
           "404": { "description": "分类不存在", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }

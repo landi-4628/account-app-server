@@ -151,6 +151,91 @@ test('PATCH /api/accounts/:id updates an account', async (t) => {
   assert.equal(body.data.account.currency, 'USD')
 })
 
+test('GET /api/accounts/:id returns a single active account', async (t) => {
+  const originalFindOne = Account?.findOne
+  const originalUserFindByPk = db.User.findByPk
+
+  Account.findOne = async ({ where }) => {
+    assert.deepEqual(where, {
+      id: ACCOUNT_1,
+      ledger_id: LEDGER_12,
+      is_deleted: false,
+    })
+
+    return {
+      id: ACCOUNT_1,
+      ledger_id: LEDGER_12,
+      client_id: 'acc-cash',
+      name: 'Cash',
+      type: 'cash',
+    }
+  }
+  db.User.findByPk = async () => ({ id: USER_41, email: 'ledger@example.com', currentLedgerId: LEDGER_12 })
+
+  t.after(() => {
+    Account.findOne = originalFindOne
+    db.User.findByPk = originalUserFindByPk
+  })
+
+  const server = http.createServer(app)
+  await new Promise((resolve) => server.listen(0, resolve))
+  t.after(() => server.close())
+
+  const { port } = server.address()
+  const response = await fetch(`http://127.0.0.1:${port}/api/accounts/${ACCOUNT_1}`, {
+    headers: authHeader,
+  })
+
+  assert.equal(response.status, 200)
+  const body = await response.json()
+  assert.equal(body.data.account.name, 'Cash')
+})
+
+test('DELETE /api/accounts/:id soft-deletes an account', async (t) => {
+  const originalFindOne = Account?.findOne
+  const originalUserFindByPk = db.User.findByPk
+
+  const record = {
+    id: ACCOUNT_4,
+    ledger_id: LEDGER_12,
+    is_deleted: false,
+    async update(payload) {
+      Object.assign(this, payload)
+      return this
+    },
+  }
+
+  Account.findOne = async ({ where }) => {
+    assert.deepEqual(where, {
+      id: ACCOUNT_4,
+      ledger_id: LEDGER_12,
+      is_deleted: false,
+    })
+
+    return record
+  }
+  db.User.findByPk = async () => ({ id: USER_41, email: 'ledger@example.com', currentLedgerId: LEDGER_12 })
+
+  t.after(() => {
+    Account.findOne = originalFindOne
+    db.User.findByPk = originalUserFindByPk
+  })
+
+  const server = http.createServer(app)
+  await new Promise((resolve) => server.listen(0, resolve))
+  t.after(() => server.close())
+
+  const { port } = server.address()
+  const response = await fetch(`http://127.0.0.1:${port}/api/accounts/${ACCOUNT_4}`, {
+    method: 'DELETE',
+    headers: authHeader,
+  })
+
+  assert.equal(response.status, 200)
+  const body = await response.json()
+  assert.equal(body.data.account.is_deleted, true)
+})
+
 test('GET /api/accounts falls back to request ledger_id when currentLedgerId is unavailable', async (t) => {
   const originalFindAll = Account?.findAll
   const originalUserFindByPk = db.User.findByPk

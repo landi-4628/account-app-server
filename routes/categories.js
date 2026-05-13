@@ -20,6 +20,13 @@ router.get('/', async (req, res) => {
   success(res, '已获取分类列表', { categories })
 })
 
+router.get('/:id', async (req, res) => {
+  const category = await findCategory(req.params.id, resolveLedgerId(req, { from: 'query' }), {
+    activeOnly: true,
+  })
+  success(res, '已获取分类', { category })
+})
+
 router.post('/', async (req, res) => {
   const category = await Category.create(
     filterCategoryBody(req.body, {
@@ -30,23 +37,48 @@ router.post('/', async (req, res) => {
 })
 
 router.patch('/:id', async (req, res) => {
-  const category = await getCategory(req.params.id, resolveLedgerId(req, { from: 'query' }))
+  const category = await findCategory(req.params.id, resolveLedgerId(req, { from: 'query' }), {
+    activeOnly: false,
+  })
 
   await category.update(filterCategoryBody(req.body, { partial: true }))
   success(res, '分类已更新', { category })
 })
 
-async function getCategory(id, ledgerId) {
+router.delete('/:id', async (req, res) => {
+  const category = await findCategory(req.params.id, resolveLedgerId(req, { from: 'query' }), {
+    activeOnly: true,
+  })
+
+  await category.update({
+    is_deleted: true,
+    deleted_at: new Date(),
+  })
+  success(res, '分类已删除', { category })
+})
+
+/**
+ * @param {string} id
+ * @param {string} ledgerId
+ * @param {{ activeOnly?: boolean }} [options]
+ */
+async function findCategory(id, ledgerId, options = {}) {
   const normalizedId = normalizeEntityId(id)
   if (!normalizedId) {
     throw new BadRequest('无效的分类 id')
   }
 
+  const where = {
+    id: normalizedId,
+    ledger_id: ledgerId,
+  }
+
+  if (options.activeOnly) {
+    Object.assign(where, { is_deleted: false })
+  }
+
   const category = await Category.findOne({
-    where: {
-      id: normalizedId,
-      ledger_id: ledgerId,
-    },
+    where,
   })
 
   if (!category) {
