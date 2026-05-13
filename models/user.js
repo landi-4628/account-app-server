@@ -71,6 +71,11 @@ export default (sequelize, DataTypes) => {
 
   User.init(
     {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
       email: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -92,7 +97,7 @@ export default (sequelize, DataTypes) => {
         field: 'password_hash',
       },
       current_ledger_id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID,
         allowNull: true,
       },
     },

@@ -7,8 +7,14 @@ import db from '../models/index.js'
 import { signAccessToken } from '../utils/auth-token.js'
 
 const { Category } = db
+
+const USER_51 = '51000000-0000-4000-8000-000000000051'
+const LEDGER_5 = '05000000-0000-4000-8000-000000000005'
+const CATEGORY_7 = 'c0000007-0000-4000-8000-000000000007'
+const CATEGORY_3 = 'c0000003-0000-4000-8000-000000000003'
+
 const authHeader = {
-  authorization: `Bearer ${signAccessToken({ sub: 51, email: 'category@example.com' })}`,
+  authorization: `Bearer ${signAccessToken({ sub: USER_51, email: 'category@example.com' })}`,
 }
 
 test('GET /api/categories lists categories for the current ledger', async (t) => {
@@ -18,7 +24,7 @@ test('GET /api/categories lists categories for the current ledger', async (t) =>
   Category.findAll = async (options) => {
     assert.deepEqual(options, {
       where: {
-        ledger_id: 5,
+        ledger_id: LEDGER_5,
         is_deleted: false,
       },
       order: [['id', 'ASC']],
@@ -26,15 +32,15 @@ test('GET /api/categories lists categories for the current ledger', async (t) =>
 
     return [
       {
-        id: 7,
-        ledger_id: 5,
+        id: CATEGORY_7,
+        ledger_id: LEDGER_5,
         client_id: 'cat-food',
         name: 'Food',
         kind: 'expense',
       },
     ]
   }
-  db.User.findByPk = async () => ({ id: 51, email: 'category@example.com', currentLedgerId: 5 })
+  db.User.findByPk = async () => ({ id: USER_51, email: 'category@example.com', currentLedgerId: LEDGER_5 })
 
   t.after(() => {
     Category.findAll = originalFindAll
@@ -60,10 +66,10 @@ test('POST /api/categories creates a category in the current ledger', async (t) 
   const originalUserFindByPk = db.User.findByPk
 
   Category.create = async (payload) => {
-    assert.equal(payload.ledger_id, 5)
+    assert.equal(payload.ledger_id, LEDGER_5)
     return payload
   }
-  db.User.findByPk = async () => ({ id: 51, email: 'category@example.com', currentLedgerId: 5 })
+  db.User.findByPk = async () => ({ id: USER_51, email: 'category@example.com', currentLedgerId: LEDGER_5 })
 
   t.after(() => {
     Category.create = originalCreate
@@ -96,8 +102,8 @@ test('PATCH /api/categories/:id updates a category', async (t) => {
   const originalUserFindByPk = db.User.findByPk
 
   const record = {
-    id: 3,
-    ledger_id: 5,
+    id: CATEGORY_3,
+    ledger_id: LEDGER_5,
     name: 'Bills',
     async update(payload) {
       Object.assign(this, payload)
@@ -107,13 +113,13 @@ test('PATCH /api/categories/:id updates a category', async (t) => {
 
   Category.findOne = async ({ where }) => {
     assert.deepEqual(where, {
-      id: 3,
-      ledger_id: 5,
+      id: CATEGORY_3,
+      ledger_id: LEDGER_5,
     })
 
     return record
   }
-  db.User.findByPk = async () => ({ id: 51, email: 'category@example.com', currentLedgerId: 5 })
+  db.User.findByPk = async () => ({ id: USER_51, email: 'category@example.com', currentLedgerId: LEDGER_5 })
 
   t.after(() => {
     Category.findOne = originalFindOne
@@ -125,7 +131,7 @@ test('PATCH /api/categories/:id updates a category', async (t) => {
   t.after(() => server.close())
 
   const { port } = server.address()
-  const response = await fetch(`http://127.0.0.1:${port}/api/categories/3`, {
+  const response = await fetch(`http://127.0.0.1:${port}/api/categories/${CATEGORY_3}`, {
     method: 'PATCH',
     headers: { ...authHeader, 'content-type': 'application/json' },
     body: JSON.stringify({

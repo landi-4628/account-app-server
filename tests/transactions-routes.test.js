@@ -7,8 +7,17 @@ import db from '../models/index.js'
 import { signAccessToken } from '../utils/auth-token.js'
 
 const { Transaction } = db
+
+const USER_61 = '61000000-0000-4000-8000-000000000061'
+const LEDGER_8 = '08000000-0000-4000-8000-000000000008'
+const TXN_22 = 't0000022-0000-4000-8000-000000000022'
+const TXN_2 = 't0000002-0000-4000-8000-000000000002'
+const TXN_9 = 't0000009-0000-4000-8000-000000000009'
+const ACCOUNT_1 = 'a0000001-0000-4000-8000-000000000001'
+const CATEGORY_2 = 'c0000002-0000-4000-8000-000000000002'
+
 const authHeader = {
-  authorization: `Bearer ${signAccessToken({ sub: 61, email: 'transaction@example.com' })}`,
+  authorization: `Bearer ${signAccessToken({ sub: USER_61, email: 'transaction@example.com' })}`,
 }
 
 test('GET /api/transactions lists transactions for the current ledger', async (t) => {
@@ -18,7 +27,7 @@ test('GET /api/transactions lists transactions for the current ledger', async (t
   Transaction.findAll = async (options) => {
     assert.deepEqual(options, {
       where: {
-        ledger_id: 8,
+        ledger_id: LEDGER_8,
         is_deleted: false,
       },
       order: [['occurred_at', 'DESC'], ['id', 'DESC']],
@@ -26,14 +35,14 @@ test('GET /api/transactions lists transactions for the current ledger', async (t
 
     return [
       {
-        id: 22,
-        ledger_id: 8,
+        id: TXN_22,
+        ledger_id: LEDGER_8,
         client_id: 'txn-1',
         amount: '28.50',
       },
     ]
   }
-  db.User.findByPk = async () => ({ id: 61, email: 'transaction@example.com', currentLedgerId: 8 })
+  db.User.findByPk = async () => ({ id: USER_61, email: 'transaction@example.com', currentLedgerId: LEDGER_8 })
 
   t.after(() => {
     Transaction.findAll = originalFindAll
@@ -59,10 +68,10 @@ test('POST /api/transactions creates a transaction in the current ledger', async
   const originalUserFindByPk = db.User.findByPk
 
   Transaction.create = async (payload) => {
-    assert.equal(payload.ledger_id, 8)
+    assert.equal(payload.ledger_id, LEDGER_8)
     return payload
   }
-  db.User.findByPk = async () => ({ id: 61, email: 'transaction@example.com', currentLedgerId: 8 })
+  db.User.findByPk = async () => ({ id: USER_61, email: 'transaction@example.com', currentLedgerId: LEDGER_8 })
 
   t.after(() => {
     Transaction.create = originalCreate
@@ -78,8 +87,8 @@ test('POST /api/transactions creates a transaction in the current ledger', async
     method: 'POST',
     headers: { ...authHeader, 'content-type': 'application/json' },
     body: JSON.stringify({
-      account_id: 1,
-      category_id: 2,
+      account_id: ACCOUNT_1,
+      category_id: CATEGORY_2,
       client_id: 'txn-2',
       amount: '128.00',
       kind: 'expense',
@@ -98,8 +107,8 @@ test('PATCH /api/transactions/:id updates a transaction', async (t) => {
   const originalUserFindByPk = db.User.findByPk
 
   const record = {
-    id: 2,
-    ledger_id: 8,
+    id: TXN_2,
+    ledger_id: LEDGER_8,
     note: 'Old',
     async update(payload) {
       Object.assign(this, payload)
@@ -109,13 +118,13 @@ test('PATCH /api/transactions/:id updates a transaction', async (t) => {
 
   Transaction.findOne = async ({ where }) => {
     assert.deepEqual(where, {
-      id: 2,
-      ledger_id: 8,
+      id: TXN_2,
+      ledger_id: LEDGER_8,
     })
 
     return record
   }
-  db.User.findByPk = async () => ({ id: 61, email: 'transaction@example.com', currentLedgerId: 8 })
+  db.User.findByPk = async () => ({ id: USER_61, email: 'transaction@example.com', currentLedgerId: LEDGER_8 })
 
   t.after(() => {
     Transaction.findOne = originalFindOne
@@ -127,7 +136,7 @@ test('PATCH /api/transactions/:id updates a transaction', async (t) => {
   t.after(() => server.close())
 
   const { port } = server.address()
-  const response = await fetch(`http://127.0.0.1:${port}/api/transactions/2`, {
+  const response = await fetch(`http://127.0.0.1:${port}/api/transactions/${TXN_2}`, {
     method: 'PATCH',
     headers: { ...authHeader, 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -146,8 +155,8 @@ test('DELETE /api/transactions/:id marks a transaction deleted', async (t) => {
   const originalUserFindByPk = db.User.findByPk
 
   const record = {
-    id: 9,
-    ledger_id: 8,
+    id: TXN_9,
+    ledger_id: LEDGER_8,
     is_deleted: false,
     deleted_at: null,
     async update(payload) {
@@ -158,13 +167,13 @@ test('DELETE /api/transactions/:id marks a transaction deleted', async (t) => {
 
   Transaction.findOne = async ({ where }) => {
     assert.deepEqual(where, {
-      id: 9,
-      ledger_id: 8,
+      id: TXN_9,
+      ledger_id: LEDGER_8,
     })
 
     return record
   }
-  db.User.findByPk = async () => ({ id: 61, email: 'transaction@example.com', currentLedgerId: 8 })
+  db.User.findByPk = async () => ({ id: USER_61, email: 'transaction@example.com', currentLedgerId: LEDGER_8 })
 
   t.after(() => {
     Transaction.findOne = originalFindOne
@@ -176,7 +185,7 @@ test('DELETE /api/transactions/:id marks a transaction deleted', async (t) => {
   t.after(() => server.close())
 
   const { port } = server.address()
-  const response = await fetch(`http://127.0.0.1:${port}/api/transactions/9`, {
+  const response = await fetch(`http://127.0.0.1:${port}/api/transactions/${TXN_9}`, {
     method: 'DELETE',
     headers: authHeader,
   })

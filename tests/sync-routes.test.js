@@ -7,8 +7,21 @@ import db from '../models/index.js'
 import { signAccessToken } from '../utils/auth-token.js'
 
 const { Account, Category, Transaction } = db
+
+const USER_SYNC = '70000000-0000-4000-8000-000000000071'
+const LEDGER_1 = '10000000-0000-4000-8000-000000000001'
+const LEDGER_2 = '20000000-0000-4000-8000-000000000002'
+const LEDGER_44 = '44000000-0000-4000-8000-000000000044'
+const ACCOUNT_101 = 'a0100000-0000-4000-8000-000000000101'
+const CATEGORY_201 = 'c0200000-0000-4000-8000-000000000201'
+const TXN_301 = 't0300000-0000-4000-8000-000000000301'
+const ACCOUNT_11 = 'a0110000-0000-4000-8000-000000000011'
+const CATEGORY_12 = 'c0120000-0000-4000-8000-000000000012'
+const TXN_13 = 't0130000-0000-4000-8000-000000000013'
+const ACCOUNT_404 = 'a4040000-0000-4000-8000-000000000404'
+
 const authHeader = {
-  authorization: `Bearer ${signAccessToken({ sub: 71, email: 'sync@example.com' })}`,
+  authorization: `Bearer ${signAccessToken({ sub: USER_SYNC, email: 'sync@example.com' })}`,
 }
 
 test('POST /api/sync/push upserts records by client_id for the current ledger', async (t) => {
@@ -30,9 +43,9 @@ test('POST /api/sync/push upserts records by client_id for the current ledger', 
 
   Account.findOne = async () => records.account
   Account.create = async (payload) => {
-    assert.equal(payload.ledger_id, 1)
+    assert.equal(payload.ledger_id, LEDGER_1)
     records.account = {
-      id: 101,
+      id: ACCOUNT_101,
       ...payload,
       async update(nextPayload) {
         Object.assign(this, nextPayload)
@@ -44,9 +57,9 @@ test('POST /api/sync/push upserts records by client_id for the current ledger', 
 
   Category.findOne = async () => records.category
   Category.create = async (payload) => {
-    assert.equal(payload.ledger_id, 1)
+    assert.equal(payload.ledger_id, LEDGER_1)
     records.category = {
-      id: 201,
+      id: CATEGORY_201,
       ...payload,
       async update(nextPayload) {
         Object.assign(this, nextPayload)
@@ -58,9 +71,9 @@ test('POST /api/sync/push upserts records by client_id for the current ledger', 
 
   Transaction.findOne = async () => records.transaction
   Transaction.create = async (payload) => {
-    assert.equal(payload.ledger_id, 1)
+    assert.equal(payload.ledger_id, LEDGER_1)
     records.transaction = {
-      id: 301,
+      id: TXN_301,
       ...payload,
       async update(nextPayload) {
         Object.assign(this, nextPayload)
@@ -69,7 +82,7 @@ test('POST /api/sync/push upserts records by client_id for the current ledger', 
     }
     return records.transaction
   }
-  db.User.findByPk = async () => ({ id: 71, email: 'sync@example.com', currentLedgerId: 1 })
+  db.User.findByPk = async () => ({ id: USER_SYNC, email: 'sync@example.com', currentLedgerId: LEDGER_1 })
 
   t.after(() => {
     Account.findOne = originals.accountFindOne
@@ -95,8 +108,8 @@ test('POST /api/sync/push upserts records by client_id for the current ledger', 
       categories: [{ client_id: 'cat-1', name: 'Food', kind: 'expense' }],
       transactions: [
         {
-          account_id: 101,
-          category_id: 201,
+          account_id: ACCOUNT_101,
+          category_id: CATEGORY_201,
           client_id: 'txn-1',
           amount: '18.00',
           kind: 'expense',
@@ -108,9 +121,9 @@ test('POST /api/sync/push upserts records by client_id for the current ledger', 
 
   assert.equal(firstResponse.status, 200)
   const firstBody = await firstResponse.json()
-  assert.equal(firstBody.data.accounts[0].id, 101)
-  assert.equal(firstBody.data.categories[0].id, 201)
-  assert.equal(firstBody.data.transactions[0].id, 301)
+  assert.equal(firstBody.data.accounts[0].id, ACCOUNT_101)
+  assert.equal(firstBody.data.categories[0].id, CATEGORY_201)
+  assert.equal(firstBody.data.transactions[0].id, TXN_301)
 
   const secondResponse = await fetch(`http://127.0.0.1:${port}/api/sync/push`, {
     method: 'POST',
@@ -124,7 +137,7 @@ test('POST /api/sync/push upserts records by client_id for the current ledger', 
 
   assert.equal(secondResponse.status, 200)
   const secondBody = await secondResponse.json()
-  assert.equal(secondBody.data.accounts[0].id, 101)
+  assert.equal(secondBody.data.accounts[0].id, ACCOUNT_101)
   assert.equal(secondBody.data.accounts[0].name, 'Cash Wallet')
 })
 
@@ -137,14 +150,14 @@ test('GET /api/sync/pull returns changed records for the current ledger since a 
   }
 
   Account.findAll = async (options) => {
-    assert.equal(options.where.ledger_id, 2)
+    assert.equal(options.where.ledger_id, LEDGER_2)
     assert.ok(options.where.updatedAt)
-    return [{ id: 11, client_id: 'acc-2' }]
+    return [{ id: ACCOUNT_11, client_id: 'acc-2' }]
   }
 
-  Category.findAll = async () => [{ id: 12, client_id: 'cat-2' }]
-  Transaction.findAll = async () => [{ id: 13, client_id: 'txn-2' }]
-  db.User.findByPk = async () => ({ id: 71, email: 'sync@example.com', currentLedgerId: 2 })
+  Category.findAll = async () => [{ id: CATEGORY_12, client_id: 'cat-2' }]
+  Transaction.findAll = async () => [{ id: TXN_13, client_id: 'txn-2' }]
+  db.User.findByPk = async () => ({ id: USER_SYNC, email: 'sync@example.com', currentLedgerId: LEDGER_2 })
 
   t.after(() => {
     Account.findAll = originals.accountFindAll
@@ -182,10 +195,10 @@ test('POST /api/sync/push falls back to body ledger_id when currentLedgerId is u
 
   Account.findOne = async () => null
   Account.create = async (payload) => {
-    assert.equal(payload.ledger_id, 44)
-    return { id: 404, ...payload }
+    assert.equal(payload.ledger_id, LEDGER_44)
+    return { id: ACCOUNT_404, ...payload }
   }
-  db.User.findByPk = async () => ({ id: 71, email: 'sync@example.com', currentLedgerId: undefined })
+  db.User.findByPk = async () => ({ id: USER_SYNC, email: 'sync@example.com', currentLedgerId: undefined })
 
   t.after(() => {
     Account.findOne = originals.accountFindOne
@@ -202,12 +215,12 @@ test('POST /api/sync/push falls back to body ledger_id when currentLedgerId is u
     method: 'POST',
     headers: { ...authHeader, 'content-type': 'application/json' },
     body: JSON.stringify({
-      ledger_id: 44,
+      ledger_id: LEDGER_44,
       accounts: [{ client_id: 'acc-fallback', name: 'Fallback Cash', type: 'asset' }],
     }),
   })
 
   assert.equal(response.status, 200)
   const body = await response.json()
-  assert.equal(body.data.accounts[0].ledger_id, 44)
+  assert.equal(body.data.accounts[0].ledger_id, LEDGER_44)
 })

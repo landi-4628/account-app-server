@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import { randomUUID } from 'node:crypto'
 
 import app from '../app.js'
 import db from '../models/index.js'
@@ -19,8 +20,6 @@ function installAuthDbTestDoubles(t) {
   const state = {
     users: [],
     refreshTokens: [],
-    nextUserId: 1,
-    nextRefreshTokenId: 1,
   }
 
   const originals = {
@@ -49,7 +48,7 @@ function installAuthDbTestDoubles(t) {
 
     const now = new Date()
     const user = {
-      id: state.nextUserId++,
+      id: randomUUID(),
       email,
       name: String(values.name || '').trim(),
       passwordHash: values.passwordHash,
@@ -68,12 +67,12 @@ function installAuthDbTestDoubles(t) {
   }
 
   db.User.findByPk = async (id) => {
-    const user = state.users.find((entry) => entry.id === Number(id))
+    const user = state.users.find((entry) => entry.id === id)
     return user ? { ...user } : null
   }
 
   db.User.update = async (values, { where } = {}) => {
-    const user = state.users.find((entry) => entry.id === Number(where?.id))
+    const user = state.users.find((entry) => entry.id === where?.id)
     if (!user) {
       return [0]
     }
@@ -112,8 +111,8 @@ function installAuthDbTestDoubles(t) {
 
   db.RefreshToken.create = async (values) => {
     const record = {
-      id: state.nextRefreshTokenId++,
-      userId: Number(values.userId),
+      id: randomUUID(),
+      userId: String(values.userId),
       tokenHash: values.tokenHash,
       expiresAt: values.expiresAt,
       revokedAt: null,
@@ -147,7 +146,7 @@ function installAuthDbTestDoubles(t) {
 
   db.RefreshToken.revokeAllForUser = async (userId) => {
     for (const record of state.refreshTokens) {
-      if (record.userId === Number(userId) && !record.revokedAt) {
+      if (record.userId === userId && !record.revokedAt) {
         record.revokedAt = new Date()
         record.updatedAt = new Date()
       }

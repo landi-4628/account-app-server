@@ -3,6 +3,7 @@ import express from 'express'
 import { Op } from 'sequelize'
 import requireAuth from '../middlewares/auth.js'
 import db from '../models/index.js'
+import { normalizeEntityId } from '../utils/entity-id.js'
 import { success } from '../utils/responses.js'
 
 const router = express.Router()
@@ -84,10 +85,11 @@ async function findExistingRecord(Model, payload) {
     }
   }
 
-  if (payload.id) {
+  const remoteId = normalizeEntityId(payload.id)
+  if (remoteId) {
     return Model.findOne({
       where: {
-        id: Number(payload.id),
+        id: remoteId,
         ledger_id: payload.ledger_id,
       },
     })
@@ -112,16 +114,15 @@ function buildPullWhere(req, options = {}) {
 }
 
 function resolveLedgerId(req, options = {}) {
-  const currentLedgerId = req.user?.currentLedgerId
-  if (currentLedgerId !== undefined && currentLedgerId !== null) {
-    return Number(currentLedgerId)
+  const fromUser = normalizeEntityId(req.user?.currentLedgerId)
+  if (fromUser) {
+    return fromUser
   }
 
   const fallbackSource = options.from === 'body' ? req.body : req.query
-  const fallbackLedgerId = fallbackSource?.ledger_id
-
-  if (fallbackLedgerId !== undefined && fallbackLedgerId !== null && fallbackLedgerId !== '') {
-    return Number(fallbackLedgerId)
+  const fromRequest = normalizeEntityId(fallbackSource?.ledger_id)
+  if (fromRequest) {
+    return fromRequest
   }
 
   throw new BadRequest('A current ledger is required for sync operations.')

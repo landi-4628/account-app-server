@@ -9,6 +9,11 @@ export default (sequelize, DataTypes) => {
   }
   Article.init(
     {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
       title: DataTypes.STRING,
       content: DataTypes.TEXT,
     },

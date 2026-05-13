@@ -2,6 +2,7 @@ import createError from 'http-errors'
 import express from 'express'
 import requireAuth from '../middlewares/auth.js'
 import db from '../models/index.js'
+import { normalizeEntityId } from '../utils/entity-id.js'
 import { success } from '../utils/responses.js'
 
 const router = express.Router()
@@ -36,9 +37,14 @@ router.patch('/:id', async (req, res) => {
 })
 
 async function getCategory(id, ledgerId) {
+  const normalizedId = normalizeEntityId(id)
+  if (!normalizedId) {
+    throw new NotFound(`Category ${id} not found.`)
+  }
+
   const category = await Category.findOne({
     where: {
-      id: Number(id),
+      id: normalizedId,
       ledger_id: ledgerId,
     },
   })
@@ -51,16 +57,15 @@ async function getCategory(id, ledgerId) {
 }
 
 function resolveLedgerId(req, options = {}) {
-  const currentLedgerId = req.user?.currentLedgerId
-  if (currentLedgerId !== undefined && currentLedgerId !== null) {
-    return Number(currentLedgerId)
+  const fromUser = normalizeEntityId(req.user?.currentLedgerId)
+  if (fromUser) {
+    return fromUser
   }
 
   const fallbackSource = options.from === 'body' ? req.body : req.query
-  const fallbackLedgerId = fallbackSource?.ledger_id
-
-  if (fallbackLedgerId !== undefined && fallbackLedgerId !== null && fallbackLedgerId !== '') {
-    return Number(fallbackLedgerId)
+  const fromRequest = normalizeEntityId(fallbackSource?.ledger_id)
+  if (fromRequest) {
+    return fromRequest
   }
 
   throw new BadRequest('A current ledger is required for category operations.')

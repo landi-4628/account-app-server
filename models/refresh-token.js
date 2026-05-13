@@ -42,7 +42,7 @@ export default (sequelize, DataTypes) => {
         },
         {
           where: {
-            userId: Number(userId),
+            userId: String(userId),
             revokedAt: null,
           },
         },
@@ -52,8 +52,13 @@ export default (sequelize, DataTypes) => {
 
   RefreshToken.init(
     {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
       userId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID,
         allowNull: false,
         field: 'user_id',
       },
