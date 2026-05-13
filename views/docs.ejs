@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f5f8;
+        --panel: #ffffff;
+        --text: #16202a;
+        --muted: #5f6b7a;
+        --border: #d8dee6;
+        --accent: #0f62fe;
+        --accent-soft: #eaf1ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      main {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 24px auto 40px;
+      }
+
+      .hero {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 24px;
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .links {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      .links a {
+        text-decoration: none;
+        color: var(--accent);
+        background: var(--accent-soft);
+        border: 1px solid #cfe0ff;
+        padding: 8px 12px;
+        border-radius: 6px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .meta-item {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 12px;
+      }
+
+      .meta-item strong {
+        display: block;
+        font-size: 18px;
+      }
+
+      .meta-item span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .section {
+        margin-top: 20px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .section-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .section-header h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .endpoint {
+        padding: 16px 20px;
+        border-top: 1px solid var(--border);
+      }
+
+      .endpoint:first-child {
+        border-top: 0;
+      }
+
+      .endpoint-top {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .method {
+        min-width: 64px;
+        text-align: center;
+        font-weight: 700;
+        color: #fff;
+        border-radius: 6px;
+        padding: 6px 10px;
+      }
+
+      .method-get { background: #0f9d58; }
+      .method-post { background: #0f62fe; }
+      .method-patch { background: #8e44ad; }
+      .method-put { background: #d97706; }
+      .method-delete { background: #d93025; }
+
+      .path {
+        font-family: Consolas, monospace;
+        font-size: 14px;
+      }
+
+      .summary {
+        margin-top: 8px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <h1><%= title %></h1>
+        <p>当前服务端 API 文档页。页面直接读取本地 OpenAPI 规范文件并按路由分组展示。</p>
+        <div class="links">
+          <a href="/docs/openapi.json" target="_blank" rel="noreferrer">openapi.json</a>
+          <a href="/docs/openapi.yaml" target="_blank" rel="noreferrer">openapi.yaml</a>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="card">
+          <h2>文档摘要</h2>
+          <div class="meta">
+            <div class="meta-item">
+              <strong id="doc-version">-</strong>
+              <span>OpenAPI 版本</span>
+            </div>
+            <div class="meta-item">
+              <strong id="path-count">-</strong>
+              <span>路径数量</span>
+            </div>
+            <div class="meta-item">
+              <strong id="schema-count">-</strong>
+              <span>Schema 数量</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>接口列表</h2>
+        </div>
+        <div id="endpoints"></div>
+      </section>
+    </main>
+
+    <script>
+      function methodClass(method) {
+        return `method method-${method.toLowerCase()}`
+      }
+
+      function endpointMarkup(path, method, operation) {
+        return `
+          <article class="endpoint">
+            <div class="endpoint-top">
+              <span class="${methodClass(method)}">${method.toUpperCase()}</span>
+              <span class="path">${path}</span>
+            </div>
+            <div class="summary">${operation.summary || ''}</div>
+          </article>
+        `
+      }
+
+      async function boot() {
+        const response = await fetch('/docs/openapi.json')
+        const spec = await response.json()
+        const paths = Object.entries(spec.paths || {})
+        const endpoints = []
+
+        for (const [path, operations] of paths) {
+          for (const [method, operation] of Object.entries(operations)) {
+            endpoints.push(endpointMarkup(path, method, operation))
+          }
+        }
+
+        document.getElementById('doc-version').textContent = spec.openapi || '-'
+        document.getElementById('path-count').textContent = String(paths.length)
+        document.getElementById('schema-count').textContent = String(
+          Object.keys(spec.components?.schemas || {}).length,
+        )
+        document.getElementById('endpoints').innerHTML = endpoints.join('')
+      }
+
+      boot().catch((error) => {
+        document.getElementById('endpoints').innerHTML = `<article class="endpoint"><div class="summary">${error.message}</div></article>`
+      })
+    </script>
+  </body>
+</html>

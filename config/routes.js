@@ -2,6 +2,7 @@ import express from 'express'
 import authRouter from '../routes/auth.js'
 import accountsRouter from '../routes/accounts.js'
 import categoriesRouter from '../routes/categories.js'
+import docsRouter from '../routes/docs.js'
 import indexRouter from '../routes/index.js'
 import meRouter from '../routes/me.js'
 import syncRouter from '../routes/sync.js'
@@ -17,6 +18,7 @@ const router = express.Router()
 router.use('/admin/articles', adminArticlesRouter)
 
 router.use('/auth', authRouter)
+router.use('/docs', docsRouter)
 router.use('/api/accounts', accountsRouter)
 router.use('/api/categories', categoriesRouter)
 router.use('/api/sync', syncRouter)

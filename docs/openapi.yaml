@@ -1,0 +1,1044 @@
+openapi: 3.0.3
+info:
+  title: account-app-sever API
+  version: 1.0.0
+  description: 根据当前 account-app-sever 路由实现整理的 OpenAPI 规范。
+servers:
+  - url: "http://localhost:3000"
+    description: Local development
+tags:
+  - name: Auth
+  - name: Profile
+  - name: Accounts
+  - name: Categories
+  - name: Transactions
+  - name: Sync
+  - name: Articles
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: boolean
+          example: true
+        message:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+      required:
+        - status
+        - message
+        - data
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "请求失败: UnauthorizedError"
+        errors:
+          type: array
+          items:
+            type: string
+      required:
+        - status
+        - message
+        - errors
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          format: email
+          example: worker-a@example.com
+        name:
+          type: string
+          example: Worker A
+        currentLedgerId:
+          type:
+            - integer
+            - null
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Tokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: <jwt>
+      required:
+        - accessToken
+    AuthPayload:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        tokens:
+          $ref: "#/components/schemas/Tokens"
+      required:
+        - user
+        - tokens
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          example: StrongPass123
+        name:
+          type: string
+          example: Worker A
+      required:
+        - email
+        - password
+        - name
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          example: StrongPass123
+      required:
+        - email
+        - password
+    ChangePasswordRequest:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - currentPassword
+        - newPassword
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+    Account:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        ledger_id:
+          type: integer
+          example: 12
+        client_id:
+          type: string
+          example: acc-cash
+        name:
+          type: string
+          example: Cash
+        type:
+          type: string
+          example: asset
+        currency:
+          type: string
+          example: CNY
+        opening_balance:
+          type: string
+          example: 88.30
+        is_deleted:
+          type: boolean
+          example: false
+        deleted_at:
+          type:
+            - string
+            - null
+          format: date-time
+    AccountWriteRequest:
+      type: object
+      properties:
+        ledger_id:
+          type: integer
+        client_id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        currency:
+          type: string
+        opening_balance:
+          type: string
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        ledger_id:
+          type: integer
+          example: 5
+        client_id:
+          type: string
+          example: cat-food
+        name:
+          type: string
+          example: Food
+        kind:
+          type: string
+          example: expense
+        color:
+          type: string
+          example: "#ffcc00"
+        is_deleted:
+          type: boolean
+          example: false
+        deleted_at:
+          type:
+            - string
+            - null
+          format: date-time
+    CategoryWriteRequest:
+      type: object
+      properties:
+        ledger_id:
+          type: integer
+        client_id:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+        color:
+          type: string
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 22
+        ledger_id:
+          type: integer
+          example: 8
+        account_id:
+          type: integer
+          example: 1
+        category_id:
+          type:
+            - integer
+            - null
+          example: 2
+        client_id:
+          type: string
+          example: txn-1
+        kind:
+          type: string
+          example: expense
+        amount:
+          type: string
+          example: 28.50
+        note:
+          type: string
+          example: Groceries
+        occurred_at:
+          type: string
+          format: date-time
+        is_deleted:
+          type: boolean
+          example: false
+        deleted_at:
+          type:
+            - string
+            - null
+          format: date-time
+    TransactionWriteRequest:
+      type: object
+      properties:
+        ledger_id:
+          type: integer
+        account_id:
+          type: integer
+        category_id:
+          type: integer
+        client_id:
+          type: string
+        kind:
+          type: string
+        amount:
+          type: string
+        note:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+    SyncPushRequest:
+      type: object
+      properties:
+        ledger_id:
+          type: integer
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountWriteRequest"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryWriteRequest"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionWriteRequest"
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: 文章标题
+        content:
+          type: string
+          example: 文章内容
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ArticleWriteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+      required:
+        - title
+        - content
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: 注册用户并登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        201:
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        409:
+          description: 邮箱已注册
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: 邮箱密码登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        200:
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: 账号或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: 刷新 access token
+      security:
+        - refreshTokenCookie:
+[]
+      responses:
+        200:
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        401:
+          description: refresh token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: 登出并撤销 refresh token
+      security:
+        - refreshTokenCookie:
+[]
+      responses:
+        200:
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /me:
+    get:
+      tags:
+        - Profile
+      summary: 获取当前用户资料
+      security:
+        - bearerAuth:
+[]
+      responses:
+        200:
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        401:
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Profile
+      summary: 更新当前用户资料
+      security:
+        - bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        409:
+          description: 邮箱冲突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /me/change-password:
+    post:
+      tags:
+        - Profile
+      summary: 修改当前用户密码
+      security:
+        - bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        200:
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        401:
+          description: 未认证或旧密码错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/accounts:
+    get:
+      tags:
+        - Accounts
+      summary: 获取账户列表
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: ledger_id
+          in: query
+          schema:
+            type: integer
+          required: false
+          description: 当用户没有 currentLedgerId 时的兜底账本 ID
+      responses:
+        200:
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: 缺少账本
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Accounts
+      summary: 创建账户
+      security:
+        - bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountWriteRequest"
+      responses:
+        201:
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: 缺少账本
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/accounts/{id}:
+    patch:
+      tags:
+        - Accounts
+      summary: 更新账户
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ledger_id
+          in: query
+          schema:
+            type: integer
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountWriteRequest"
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        404:
+          description: 账户不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/categories:
+    get:
+      tags:
+        - Categories
+      summary: 获取分类列表
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: ledger_id
+          in: query
+          schema:
+            type: integer
+          required: false
+      responses:
+        200:
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: 缺少账本
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags:
+        - Categories
+      summary: 创建分类
+      security:
+        - bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryWriteRequest"
+      responses:
+        201:
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /api/categories/{id}:
+    patch:
+      tags:
+        - Categories
+      summary: 更新分类
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ledger_id
+          in: query
+          schema:
+            type: integer
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryWriteRequest"
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        404:
+          description: 分类不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/transactions:
+    get:
+      tags:
+        - Transactions
+      summary: 获取交易列表
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: ledger_id
+          in: query
+          schema:
+            type: integer
+          required: false
+      responses:
+        200:
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+    post:
+      tags:
+        - Transactions
+      summary: 创建交易
+      security:
+        - bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionWriteRequest"
+      responses:
+        201:
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /api/transactions/{id}:
+    get:
+      tags:
+        - Transactions
+      summary: 获取交易详情
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ledger_id
+          in: query
+          schema:
+            type: integer
+          required: false
+      responses:
+        200:
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        404:
+          description: 交易不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Transactions
+      summary: 更新交易
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ledger_id
+          in: query
+          schema:
+            type: integer
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionWriteRequest"
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        404:
+          description: 交易不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - Transactions
+      summary: 软删除交易
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: ledger_id
+          in: query
+          schema:
+            type: integer
+          required: false
+      responses:
+        200:
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        404:
+          description: 交易不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/sync/push:
+    post:
+      tags:
+        - Sync
+      summary: 批量推送本地变更
+      security:
+        - bearerAuth:
+[]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPushRequest"
+      responses:
+        200:
+          description: 推送成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: 缺少账本
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/sync/pull:
+    get:
+      tags:
+        - Sync
+      summary: 拉取增量数据
+      security:
+        - bearerAuth:
+[]
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: ledger_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 拉取成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: 缺少账本
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/articles:
+    get:
+      tags:
+        - Articles
+      summary: 查询文章列表
+      parameters:
+        - name: currentPage
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: title
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+    post:
+      tags:
+        - Articles
+      summary: 创建文章
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArticleWriteRequest"
+      responses:
+        201:
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /admin/articles/{id}:
+    get:
+      tags:
+        - Articles
+      summary: 查询文章详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        404:
+          description: 文章不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags:
+        - Articles
+      summary: 更新文章
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArticleWriteRequest"
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        404:
+          description: 文章不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+        - Articles
+      summary: 删除文章
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        404:
+          description: 文章不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
