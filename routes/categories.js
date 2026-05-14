@@ -6,7 +6,7 @@ import { normalizeEntityId } from '../utils/entity-id.js'
 import { success } from '../utils/responses.js'
 
 const router = express.Router()
-const { Category } = db
+const { Category, Transaction } = db
 const { BadRequest, NotFound } = createError
 
 router.use(requireAuth)
@@ -49,11 +49,25 @@ router.delete('/:id', async (req, res) => {
   const category = await findCategory(req.params.id, resolveLedgerId(req, { from: 'query' }), {
     activeOnly: true,
   })
+  const deletedAt = new Date()
 
   await category.update({
     is_deleted: true,
-    deleted_at: new Date(),
+    deleted_at: deletedAt,
   })
+  await Transaction.update(
+    {
+      is_deleted: true,
+      deleted_at: deletedAt,
+    },
+    {
+      where: {
+        ledger_id: category.ledger_id,
+        category_id: category.id,
+        is_deleted: false,
+      },
+    },
+  )
   success(res, '分类已删除', { category })
 })
 

@@ -7,6 +7,7 @@ import db from '../models/index.js'
 import { signAccessToken } from '../utils/auth-token.js'
 
 const { Category } = db
+const { Transaction } = db
 
 const USER_51 = '51000000-0000-4000-8000-000000000051'
 const LEDGER_5 = '05000000-0000-4000-8000-000000000005'
@@ -137,9 +138,10 @@ test('GET /api/categories/:id returns a single active category', async (t) => {
   assert.equal(body.data.category.name, 'Food')
 })
 
-test('DELETE /api/categories/:id soft-deletes a category', async (t) => {
+test('DELETE /api/categories/:id soft-deletes a category and its transactions', async (t) => {
   const originalFindOne = Category?.findOne
   const originalUserFindByPk = db.User.findByPk
+  const originalTransactionUpdate = Transaction?.update
 
   const record = {
     id: CATEGORY_3,
@@ -150,6 +152,8 @@ test('DELETE /api/categories/:id soft-deletes a category', async (t) => {
       return this
     },
   }
+  /** @type {Array<{ payload: Record<string, unknown>, options: Record<string, unknown> }>} */
+  const transactionUpdates = []
 
   Category.findOne = async ({ where }) => {
     assert.deepEqual(where, {
@@ -160,11 +164,16 @@ test('DELETE /api/categories/:id soft-deletes a category', async (t) => {
 
     return record
   }
+  Transaction.update = async (payload, options) => {
+    transactionUpdates.push({ payload, options })
+    return [1]
+  }
   db.User.findByPk = async () => ({ id: USER_51, email: 'category@example.com', currentLedgerId: LEDGER_5 })
 
   t.after(() => {
     Category.findOne = originalFindOne
     db.User.findByPk = originalUserFindByPk
+    Transaction.update = originalTransactionUpdate
   })
 
   const server = http.createServer(app)
@@ -180,6 +189,14 @@ test('DELETE /api/categories/:id soft-deletes a category', async (t) => {
   assert.equal(response.status, 200)
   const body = await response.json()
   assert.equal(body.data.category.is_deleted, true)
+  assert.equal(transactionUpdates.length, 1)
+  assert.equal(transactionUpdates[0].payload.is_deleted, true)
+  assert.ok(transactionUpdates[0].payload.deleted_at instanceof Date)
+  assert.deepEqual(transactionUpdates[0].options.where, {
+    ledger_id: LEDGER_5,
+    category_id: CATEGORY_3,
+    is_deleted: false,
+  })
 })
 
 test('PATCH /api/categories/:id updates a category', async (t) => {
