@@ -3,6 +3,7 @@ import { Model } from 'sequelize'
 export default (sequelize, DataTypes) => {
   class Ledger extends Model {
     static associate(models) {
+      Ledger.belongsTo(models.User, { foreignKey: 'owner_user_id', as: 'ownerUser' })
       Ledger.hasMany(models.Category, { foreignKey: 'ledger_id', as: 'categories' })
       Ledger.hasMany(models.Transaction, { foreignKey: 'ledger_id', as: 'transactions' })
     }
@@ -38,11 +39,21 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      owner_user_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
     {
       sequelize,
       modelName: 'Ledger',
       tableName: 'Ledgers',
+      indexes: [
+        {
+          fields: ['owner_user_id'],
+          name: 'ledgers_owner_user_id_idx',
+        },
+      ],
     },
   )
 

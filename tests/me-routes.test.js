@@ -20,6 +20,7 @@ function installAuthDbTestDoubles(t) {
   const state = {
     users: [],
     refreshTokens: [],
+    ledgers: [],
   }
 
   const originals = {
@@ -29,6 +30,9 @@ function installAuthDbTestDoubles(t) {
       findByPk: db.User.findByPk,
       update: db.User.update,
       sanitize: db.User.sanitize,
+    },
+    ledger: {
+      findOrCreate: db.Ledger.findOrCreate,
     },
     refreshToken: {
       create: db.RefreshToken.create,
@@ -52,6 +56,7 @@ function installAuthDbTestDoubles(t) {
       email,
       name: String(values.name || '').trim(),
       passwordHash: values.passwordHash,
+      currentLedgerId: values.currentLedgerId ?? null,
       createdAt: now,
       updatedAt: now,
     }
@@ -105,9 +110,34 @@ function installAuthDbTestDoubles(t) {
     id: user.id,
     email: user.email,
     name: user.name,
+    currentLedgerId: user.current_ledger_id ?? user.currentLedgerId ?? null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   })
+
+  db.Ledger.findOrCreate = async ({ where, defaults } = {}) => {
+    const clientId = where?.client_id ?? defaults?.client_id ?? null
+    const existing = state.ledgers.find((ledger) => ledger.client_id === clientId)
+    if (existing) {
+      return [{ ...existing }, false]
+    }
+
+    const now = new Date()
+    const ledger = {
+      id: randomUUID(),
+      name: defaults?.name ?? 'Personal Ledger',
+      client_id: clientId,
+      owner_user_id: defaults?.owner_user_id ?? null,
+      base_currency: defaults?.base_currency ?? 'CNY',
+      is_deleted: false,
+      deleted_at: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    state.ledgers.push(ledger)
+    return [{ ...ledger }, true]
+  }
 
   db.RefreshToken.create = async (values) => {
     const record = {
@@ -155,6 +185,7 @@ function installAuthDbTestDoubles(t) {
 
   t.after(() => {
     Object.assign(db.User, originals.user)
+    Object.assign(db.Ledger, originals.ledger)
     Object.assign(db.RefreshToken, originals.refreshToken)
   })
 }
@@ -203,6 +234,41 @@ test('me endpoints require auth and return the current profile', async (t) => {
   assert.equal(response.status, 200)
   assert.equal(payload.data.user.email, 'me@example.com')
   assert.equal(payload.data.user.name, 'Profile User')
+})
+
+test('GET /me always returns a fresh JSON body for authenticated clients', async (t) => {
+  installAuthDbTestDoubles(t)
+  const currentLedgerId = randomUUID()
+  const originalFindByPk = db.User.findByPk
+  db.User.findByPk = async (id) => {
+    const user = await originalFindByPk(id)
+    return user ? { ...user, current_ledger_id: currentLedgerId } : null
+  }
+
+  const { server, baseUrl } = await startServer()
+  t.after(() => server.close())
+
+  const session = await registerAndLogin(baseUrl)
+  const firstResponse = await fetch(`${baseUrl}/me`, {
+    headers: authHeaders(session.accessToken),
+  })
+  const firstPayload = await firstResponse.json()
+  const etag = firstResponse.headers.get('etag')
+
+  assert.equal(firstResponse.status, 200)
+  assert.equal(firstPayload.data.user.currentLedgerId, currentLedgerId)
+  assert.equal(firstResponse.headers.get('cache-control'), 'no-store')
+  assert.ok(etag)
+
+  const secondResponse = await fetch(`${baseUrl}/me`, {
+    headers: authHeaders(session.accessToken, {
+      'if-none-match': etag,
+    }),
+  })
+  const secondPayload = await secondResponse.json()
+
+  assert.equal(secondResponse.status, 200)
+  assert.equal(secondPayload.data.user.currentLedgerId, currentLedgerId)
 })
 
 test('profile write endpoints reject unauthenticated requests', async (t) => {

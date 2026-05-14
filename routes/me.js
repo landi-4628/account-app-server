@@ -12,6 +12,9 @@ const { BadRequest, Conflict, Unauthorized } = createError
 router.use(requireAuth)
 
 router.get('/', async (req, res) => {
+  res.set('Cache-Control', 'no-store')
+  delete req.headers['if-none-match']
+  delete req.headers['if-modified-since']
   success(res, '已获取当前用户信息', {
     user: db.User.sanitize(req.user),
   })

@@ -7,6 +7,10 @@ export default (sequelize, DataTypes) => {
         foreignKey: 'current_ledger_id',
         as: 'currentLedger',
       })
+      User.hasMany(models.Ledger, {
+        foreignKey: 'owner_user_id',
+        as: 'ownedLedgers',
+      })
       User.hasMany(models.RefreshToken, {
         foreignKey: 'user_id',
         as: 'refreshTokens',
@@ -28,6 +32,49 @@ export default (sequelize, DataTypes) => {
         createdAt: source.createdAt,
         updatedAt: source.updatedAt,
       }
+    }
+
+    static defaultLedgerClientId(userId) {
+      return `default-ledger:${userId}`
+    }
+
+    static defaultLedgerName(user) {
+      const source = typeof user?.get === 'function' ? user.get() : user
+      const normalizedName = String(source?.name || '').trim()
+      return normalizedName ? `${normalizedName} Ledger` : 'Personal Ledger'
+    }
+
+    static async ensureCurrentLedger(user) {
+      if (!user) {
+        return null
+      }
+
+      const source = typeof user.get === 'function' ? user.get() : user
+      const currentLedgerId = source.current_ledger_id ?? source.currentLedgerId ?? null
+      if (currentLedgerId) {
+        return user
+      }
+
+      const Ledger = User.sequelize.models.Ledger
+      const clientId = User.defaultLedgerClientId(source.id)
+      const [ledger] = await Ledger.findOrCreate({
+        where: { client_id: clientId },
+        defaults: {
+          client_id: clientId,
+          name: User.defaultLedgerName(source),
+          owner_user_id: source.id,
+        },
+      })
+
+      const nextLedgerId = ledger.id
+
+      if (typeof user.update === 'function') {
+        await user.update({ current_ledger_id: nextLedgerId })
+        return user
+      }
+
+      await User.update({ current_ledger_id: nextLedgerId }, { where: { id: source.id } })
+      return (await User.findByPk(source.id)) ?? { ...source, current_ledger_id: nextLedgerId }
     }
 
     static async updateProfile(id, values) {
@@ -81,7 +128,12 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
         unique: true,
         set(value) {
-          this.setDataValue('email', String(value || '').trim().toLowerCase())
+          this.setDataValue(
+            'email',
+            String(value || '')
+              .trim()
+              .toLowerCase(),
+          )
         },
       },
       name: {

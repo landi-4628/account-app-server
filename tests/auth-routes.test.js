@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 
 import app from '../app.js'
 import db from '../models/index.js'
+import { hashPassword } from '../utils/auth-password.js'
 import { signAccessToken } from '../utils/auth-token.js'
 
 async function startServer() {
@@ -34,6 +35,7 @@ function installAuthDbTestDoubles(t) {
   const state = {
     users: [],
     refreshTokens: [],
+    ledgers: [],
   }
 
   const originals = {
@@ -43,6 +45,9 @@ function installAuthDbTestDoubles(t) {
       findByPk: db.User.findByPk,
       update: db.User.update,
       sanitize: db.User.sanitize,
+    },
+    ledger: {
+      findOrCreate: db.Ledger.findOrCreate,
     },
     refreshToken: {
       create: db.RefreshToken.create,
@@ -66,6 +71,7 @@ function installAuthDbTestDoubles(t) {
       email,
       name: String(values.name || '').trim(),
       passwordHash: values.passwordHash,
+      current_ledger_id: values.current_ledger_id ?? values.currentLedgerId ?? null,
       createdAt: now,
       updatedAt: now,
     }
@@ -111,6 +117,14 @@ function installAuthDbTestDoubles(t) {
       user.passwordHash = values.passwordHash
     }
 
+    if (Object.prototype.hasOwnProperty.call(values, 'current_ledger_id')) {
+      user.current_ledger_id = values.current_ledger_id
+    }
+
+    if (Object.prototype.hasOwnProperty.call(values, 'currentLedgerId')) {
+      user.current_ledger_id = values.currentLedgerId
+    }
+
     user.updatedAt = new Date()
     return [1]
   }
@@ -119,9 +133,33 @@ function installAuthDbTestDoubles(t) {
     id: user.id,
     email: user.email,
     name: user.name,
+    currentLedgerId: user.current_ledger_id ?? user.currentLedgerId ?? null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   })
+
+  db.Ledger.findOrCreate = async ({ where, defaults } = {}) => {
+    const clientId = where?.client_id ?? defaults?.client_id ?? null
+    const existing = state.ledgers.find((ledger) => ledger.client_id === clientId)
+    if (existing) {
+      return [{ ...existing }, false]
+    }
+
+    const now = new Date()
+    const ledger = {
+      id: randomUUID(),
+      name: defaults?.name ?? 'Personal Ledger',
+      client_id: clientId,
+      base_currency: defaults?.base_currency ?? 'CNY',
+      is_deleted: false,
+      deleted_at: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    state.ledgers.push(ledger)
+    return [{ ...ledger }, true]
+  }
 
   db.RefreshToken.create = async (values) => {
     const record = {
@@ -169,8 +207,11 @@ function installAuthDbTestDoubles(t) {
 
   t.after(() => {
     Object.assign(db.User, originals.user)
+    Object.assign(db.Ledger, originals.ledger)
     Object.assign(db.RefreshToken, originals.refreshToken)
   })
+
+  return state
 }
 
 test('signAccessToken refuses implicit secrets outside development and test', () => {
@@ -213,6 +254,7 @@ test('register creates a user, returns profile data, and sets refresh cookie', a
   assert.equal(payload.status, true)
   assert.equal(payload.data.user.email, 'worker-a@example.com')
   assert.equal(payload.data.user.name, 'Worker A')
+  assert.match(payload.data.user.currentLedgerId, /^[0-9a-f-]{36}$/i)
   assert.ok(payload.data.tokens.accessToken)
   assert.match(readCookie(response, 'refreshToken'), /^refreshToken=/)
 })
@@ -244,18 +286,18 @@ test('refresh-token cookie includes centralized secure attributes for https requ
 })
 
 test('login rejects invalid credentials and then returns new tokens for valid credentials', async (t) => {
-  installAuthDbTestDoubles(t)
+  const state = installAuthDbTestDoubles(t)
   const { server, baseUrl } = await startServer()
   t.after(() => server.close())
 
-  await fetch(`${baseUrl}/auth/register`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      email: 'login@example.com',
-      password: 'StrongPass123',
-      name: 'Login User',
-    }),
+  state.users.push({
+    id: randomUUID(),
+    email: 'login@example.com',
+    name: 'Login User',
+    passwordHash: hashPassword('StrongPass123'),
+    current_ledger_id: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   })
 
   const denied = await fetch(`${baseUrl}/auth/login`, {
@@ -283,6 +325,7 @@ test('login rejects invalid credentials and then returns new tokens for valid cr
   assert.equal(response.status, 200)
   assert.equal(payload.status, true)
   assert.equal(payload.data.user.email, 'login@example.com')
+  assert.match(payload.data.user.currentLedgerId, /^[0-9a-f-]{36}$/i)
   assert.ok(payload.data.tokens.accessToken)
   assert.match(readCookie(response, 'refreshToken'), /^refreshToken=/)
 })

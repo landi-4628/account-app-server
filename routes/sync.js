@@ -110,7 +110,7 @@ function buildPullWhere(req, options = {}) {
 }
 
 function resolveLedgerId(req, options = {}) {
-  const fromUser = normalizeEntityId(req.user?.currentLedgerId)
+  const fromUser = normalizeEntityId(req.user?.currentLedgerId ?? req.user?.current_ledger_id)
   if (fromUser) {
     return fromUser
   }

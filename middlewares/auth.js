@@ -15,11 +15,13 @@ export default async function requireAuth(req, res, next) {
     }
 
     const payload = verifyAccessToken(token)
-    const user = await db.User.findByPk(payload.sub)
+    let user = await db.User.findByPk(payload.sub)
 
     if (!user) {
       throw new Unauthorized('登录已失效，请重新登录')
     }
+
+    user = await db.User.ensureCurrentLedger(user)
 
     req.auth = payload
     req.user = user

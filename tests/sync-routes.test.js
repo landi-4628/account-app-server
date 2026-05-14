@@ -165,6 +165,7 @@ test('POST /api/sync/push falls back to body ledger_id when currentLedgerId is u
   const originals = {
     categoryFindOne: Category?.findOne,
     categoryCreate: Category?.create,
+    ledgerFindOrCreate: db.Ledger.findOrCreate,
     userFindByPk: db.User.findByPk,
   }
 
@@ -173,11 +174,21 @@ test('POST /api/sync/push falls back to body ledger_id when currentLedgerId is u
     assert.equal(payload.ledger_id, LEDGER_44)
     return { id: CATEGORY_201, ...payload }
   }
+  db.Ledger.findOrCreate = async () => [
+    {
+      id: LEDGER_1,
+      async update() {
+        return this
+      },
+    },
+    true,
+  ]
   db.User.findByPk = async () => ({ id: USER_SYNC, email: 'sync@example.com', currentLedgerId: undefined })
 
   t.after(() => {
     Category.findOne = originals.categoryFindOne
     Category.create = originals.categoryCreate
+    db.Ledger.findOrCreate = originals.ledgerFindOrCreate
     db.User.findByPk = originals.userFindByPk
   })
 
@@ -198,4 +209,46 @@ test('POST /api/sync/push falls back to body ledger_id when currentLedgerId is u
   assert.equal(response.status, 200)
   const body = await response.json()
   assert.equal(body.data.categories[0].ledger_id, LEDGER_44)
+})
+
+test('POST /api/sync/push accepts current_ledger_id from authenticated sequelize-style users', async (t) => {
+  const originals = {
+    categoryFindOne: Category?.findOne,
+    categoryCreate: Category?.create,
+    userFindByPk: db.User.findByPk,
+  }
+
+  Category.findOne = async () => null
+  Category.create = async (payload) => {
+    assert.equal(payload.ledger_id, LEDGER_1)
+    return { id: CATEGORY_201, ...payload }
+  }
+  db.User.findByPk = async () => ({
+    id: USER_SYNC,
+    email: 'sync@example.com',
+    current_ledger_id: LEDGER_1,
+  })
+
+  t.after(() => {
+    Category.findOne = originals.categoryFindOne
+    Category.create = originals.categoryCreate
+    db.User.findByPk = originals.userFindByPk
+  })
+
+  const server = http.createServer(app)
+  await new Promise((resolve) => server.listen(0, resolve))
+  t.after(() => server.close())
+
+  const { port } = server.address()
+  const response = await fetch(`http://127.0.0.1:${port}/api/sync/push`, {
+    method: 'POST',
+    headers: { ...authHeader, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      categories: [{ client_id: 'cat-sequelize', name: 'Meals', kind: 'expense' }],
+    }),
+  })
+
+  assert.equal(response.status, 200)
+  const body = await response.json()
+  assert.equal(body.data.categories[0].ledger_id, LEDGER_1)
 })

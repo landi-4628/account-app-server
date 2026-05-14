@@ -41,6 +41,10 @@ function issueAuthPayload(user) {
   }
 }
 
+async function ensureCurrentLedger(user) {
+  return db.User.ensureCurrentLedger(user)
+}
+
 async function persistRefreshToken(userId) {
   const refreshToken = createRefreshToken()
 
@@ -100,6 +104,8 @@ router.post('/register', async (req, res) => {
     throw error
   }
 
+  user = await ensureCurrentLedger(user)
+
   const refreshToken = await persistRefreshToken(user.id)
   setRefreshTokenCookie(res, refreshToken)
 
@@ -109,11 +115,13 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const email = ensureEmail(req.body.email)
   const password = String(req.body.password || '')
-  const user = await db.User.findOne({ where: { email } })
+  let user = await db.User.findOne({ where: { email } })
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     throw new Unauthorized('邮箱或密码不正确')
   }
+
+  user = await ensureCurrentLedger(user)
 
   const refreshToken = await persistRefreshToken(user.id)
   setRefreshTokenCookie(res, refreshToken)
@@ -134,10 +142,12 @@ router.post('/refresh', async (req, res) => {
 
   await db.RefreshToken.revokeByTokenHash(record.tokenHash)
 
-  const user = await db.User.findByPk(record.userId)
+  let user = await db.User.findByPk(record.userId)
   if (!user) {
     throw new Unauthorized('刷新令牌对应的用户不存在')
   }
+
+  user = await ensureCurrentLedger(user)
 
   const nextRefreshToken = await persistRefreshToken(user.id)
   setRefreshTokenCookie(res, nextRefreshToken)
