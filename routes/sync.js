@@ -62,10 +62,32 @@ async function syncCollection(Model, items, filterBody, ledgerId) {
       continue
     }
 
-    records.push(await Model.create(payload))
+    records.push(await createOrRecoverExistingRecord(Model, payload))
   }
 
   return records
+}
+
+async function createOrRecoverExistingRecord(Model, payload) {
+  try {
+    return await Model.create(payload)
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) {
+      throw error
+    }
+
+    const record = await findExistingRecord(Model, payload)
+    if (!record) {
+      throw error
+    }
+
+    await record.update(removeUndefined(payload))
+    return record
+  }
+}
+
+function isUniqueConstraintError(error) {
+  return error?.name === 'SequelizeUniqueConstraintError'
 }
 
 async function findExistingRecord(Model, payload) {

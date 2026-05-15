@@ -16,6 +16,7 @@ const CATEGORY_201 = 'c0200000-0000-4000-8000-000000000201'
 const TXN_301 = 't0300000-0000-4000-8000-000000000301'
 const CATEGORY_12 = 'c0120000-0000-4000-8000-000000000012'
 const TXN_13 = 't0130000-0000-4000-8000-000000000013'
+const TXN_409 = 't4090000-0000-4000-8000-000000000409'
 
 const authHeader = {
   authorization: `Bearer ${signAccessToken({ sub: USER_SYNC, email: 'sync@example.com' })}`,
@@ -159,6 +160,82 @@ test('GET /api/sync/pull returns changed records for the current ledger since a 
   assert.equal(body.data.transactions[0].client_id, 'txn-2')
   assert.equal(body.data.transactions[0].account_id, 'acc-bank')
   assert.ok(body.data.server_time)
+})
+
+test('POST /api/sync/push treats duplicate transaction client ids as idempotent updates', async (t) => {
+  const originals = {
+    categoryFindOne: Category?.findOne,
+    transactionFindOne: Transaction?.findOne,
+    transactionCreate: Transaction?.create,
+    userFindByPk: db.User.findByPk,
+  }
+
+  const existingTransaction = {
+    id: TXN_409,
+    ledger_id: LEDGER_1,
+    account_id: 'acc-wechat',
+    category_id: CATEGORY_201,
+    client_id: 'txn-duplicate',
+    amount: 1200,
+    kind: 'expense',
+    note: '',
+    occurred_at: '2026-05-15T08:31:00.000Z',
+    async update(nextPayload) {
+      Object.assign(this, nextPayload)
+      return this
+    },
+  }
+  let transactionFindOneCalls = 0
+
+  Category.findOne = async () => ({ id: CATEGORY_201, client_id: 'cat-food' })
+  Transaction.findOne = async ({ where }) => {
+    assert.equal(where.ledger_id, LEDGER_1)
+    assert.equal(where.client_id, 'txn-duplicate')
+    transactionFindOneCalls += 1
+    return transactionFindOneCalls === 1 ? null : existingTransaction
+  }
+  Transaction.create = async () => {
+    const error = new Error('Duplicate entry')
+    error.name = 'SequelizeUniqueConstraintError'
+    throw error
+  }
+  db.User.findByPk = async () => ({ id: USER_SYNC, email: 'sync@example.com', currentLedgerId: LEDGER_1 })
+
+  t.after(() => {
+    Category.findOne = originals.categoryFindOne
+    Transaction.findOne = originals.transactionFindOne
+    Transaction.create = originals.transactionCreate
+    db.User.findByPk = originals.userFindByPk
+  })
+
+  const server = http.createServer(app)
+  await new Promise((resolve) => server.listen(0, resolve))
+  t.after(() => server.close())
+
+  const { port } = server.address()
+  const response = await fetch(`http://127.0.0.1:${port}/api/sync/push`, {
+    method: 'POST',
+    headers: { ...authHeader, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      transactions: [
+        {
+          account_id: 'acc-wechat',
+          category_id: CATEGORY_201,
+          client_id: 'txn-duplicate',
+          amount: 1200,
+          kind: 'expense',
+          note: 'updated after duplicate',
+          occurred_at: '2026-05-15T08:31:00.000Z',
+        },
+      ],
+    }),
+  })
+
+  assert.equal(response.status, 200)
+  const body = await response.json()
+  assert.equal(body.data.transactions[0].id, TXN_409)
+  assert.equal(body.data.transactions[0].note, 'updated after duplicate')
+  assert.equal(transactionFindOneCalls, 2)
 })
 
 test('POST /api/sync/push falls back to body ledger_id when currentLedgerId is unavailable', async (t) => {
